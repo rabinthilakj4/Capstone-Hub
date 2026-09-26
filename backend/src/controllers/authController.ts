@@ -604,8 +604,8 @@ export const googleLogin = async (req: Request, res: Response) => {
     }
 
     // 2. FETCH EXISTING USER RECORD
-    let user = await prisma.user.findUnique({
-      where: { email: cleanEmail },
+    let user = await prisma.user.findFirst({
+      where: { email: { equals: cleanEmail, mode: 'insensitive' } },
       include: {
         department: true,
         student_profile: true,
@@ -663,11 +663,30 @@ export const googleLogin = async (req: Request, res: Response) => {
       const targetDeptId = userDept.department_id;
 
       if (!user) {
-        let googleStudentId: string | null = null;
         if (assignedRole === UserRole.STUDENT || (assignedRole as string) === 'STUDENT') {
-          googleStudentId = await generateNextStudentId(targetDeptId, '1st Year');
+          // 🔒 FIRST-TIME STUDENT GOOGLE SIGN-IN: DO NOT CREATE ANY USER OR STUDENT RECORD IN DB YET!
+          const tempToken = jwt.sign(
+            { tempRegistration: true, email: cleanEmail, name: parsedName, department_id: targetDeptId, joiningYear: parsedInfo.joiningYear },
+            JWT_SECRET,
+            { expiresIn: '30m' }
+          );
+
+          return res.json({
+            success: true,
+            isNewUser: true,
+            requirePersonalDetails: true,
+            tempToken,
+            pendingStudent: {
+              email: cleanEmail,
+              name: parsedName,
+              department_id: targetDeptId,
+              department_name: userDept.department_name,
+              joiningYear: parsedInfo.joiningYear || '2024'
+            }
+          });
         }
 
+        // For MENTOR / FACULTY accounts, create staff profile as before
         user = await prisma.user.create({
           data: {
             name: parsedName,
@@ -675,34 +694,19 @@ export const googleLogin = async (req: Request, res: Response) => {
             password_hash: defaultPassword,
             role: assignedRole,
             department_id: targetDeptId,
-            student_id: googleStudentId,
+            student_id: null,
             email_verified: true,
             status: 'ACTIVE',
-            profile_completed: false, // New student/staff user requires initial onboarding setup
-            ...(assignedRole === UserRole.STUDENT
-              ? {
-                  student_profile: {
-                    create: {
-                      skills: JSON.stringify([]),
-                      interests: JSON.stringify([]),
-                      experience: `BIT Sathy Student (${parsedInfo.joiningYear || '2024'} Batch)`,
-                      availability: 'Available',
-                      portfolio_links: JSON.stringify([]),
-                      preferred_domains: JSON.stringify([])
-                    }
-                  }
-                }
-              : {
-                  mentor_profile: {
-                    create: {
-                      expertise: JSON.stringify([]),
-                      research_interests: JSON.stringify([]),
-                      availability: 'Available',
-                      mentoring_capacity: 5,
-                      current_load: 0
-                    }
-                  }
-                })
+            profile_completed: false,
+            mentor_profile: {
+              create: {
+                expertise: JSON.stringify([]),
+                research_interests: JSON.stringify([]),
+                availability: 'Available',
+                mentoring_capacity: 5,
+                current_load: 0
+              }
+            }
           },
           include: {
             department: true,
@@ -760,6 +764,8 @@ export const googleLogin = async (req: Request, res: Response) => {
 
     return res.json({
       success: true,
+      isNewUser: false,
+      requirePersonalDetails: false,
       token,
       user: formatUserResponse(user)
     });
@@ -989,6 +995,140 @@ export const adminVerifyOtp = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: 'Admin verification failed.', error: error.message });
+  }
+};
+
+export const confirmGoogleStudentRegistration = async (req: Request, res: Response) => {
+  try {
+    const { email, name, student_id, register_number, phone, department_id, year, skills } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Google account email is required.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanEmail.endsWith('@bitsathy.ac.in')) {
+      return res.status(403).json({ success: false, message: 'Only official @bitsathy.ac.in student accounts are allowed.' });
+    }
+
+    // Check if user is already registered in User table
+    const existingUser = await prisma.user.findFirst({
+      where: { email: { equals: cleanEmail } },
+      include: { department: true, student_profile: true, mentor_profile: true }
+    });
+
+    if (existingUser) {
+      const token = jwt.sign(
+        { user_id: existingUser.user_id, email: existingUser.email, role: existingUser.role, name: existingUser.name },
+        JWT_SECRET,
+        { expiresIn: '1d' }
+      );
+
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 * 1000
+      });
+
+      return res.json({
+        success: true,
+        message: 'Account already exists. Logged in successfully.',
+        token,
+        user: formatUserResponse(existingUser)
+      });
+    }
+
+    // Validate required fields
+    const finalName = (name || '').trim();
+    const finalStudentId = (student_id || register_number || '').trim().toUpperCase();
+    const finalPhone = (phone || '').trim();
+    const finalDeptId = Number(department_id);
+    const finalYear = year || 'I Year';
+
+    if (!finalName) {
+      return res.status(400).json({ success: false, message: 'Full Name is required.' });
+    }
+    if (!finalStudentId) {
+      return res.status(400).json({ success: false, message: 'Register Number / Student ID is required.' });
+    }
+    if (!finalPhone) {
+      return res.status(400).json({ success: false, message: 'Mobile Number is required.' });
+    }
+    if (!finalDeptId || isNaN(finalDeptId)) {
+      return res.status(400).json({ success: false, message: 'Valid Department selection is required.' });
+    }
+
+    // Check duplicate student_id
+    const existingStudentId = await prisma.user.findFirst({
+      where: { student_id: finalStudentId }
+    });
+
+    if (existingStudentId) {
+      return res.status(400).json({ success: false, message: `Register Number / Student ID "${finalStudentId}" is already registered by another student.` });
+    }
+
+    const defaultPassword = await bcrypt.hash('GoogleAuth@2026', 10);
+    const parsedInfo = parseBitSathyEmail(cleanEmail);
+
+    // 🔒 PRISMA TRANSACTION: Create User & StudentProfile ONLY AFTER PERSONAL DETAILS ARE CONFIRMED
+    const newUser = await prisma.$transaction(async (tx) => {
+      const createdUser = await tx.user.create({
+        data: {
+          name: finalName,
+          email: cleanEmail,
+          password_hash: defaultPassword,
+          role: 'STUDENT',
+          department_id: finalDeptId,
+          student_id: finalStudentId,
+          email_verified: true,
+          status: 'ACTIVE',
+          profile_completed: true,
+          student_profile: {
+            create: {
+              year: finalYear,
+              phone: finalPhone,
+              skills: JSON.stringify(Array.isArray(skills) ? skills : []),
+              interests: JSON.stringify([]),
+              experience: `BIT Sathy Student (${parsedInfo.joiningYear || '2024'} Batch)`,
+              availability: 'Available',
+              portfolio_links: JSON.stringify([]),
+              preferred_domains: JSON.stringify([])
+            }
+          }
+        },
+        include: {
+          department: true,
+          student_profile: true,
+          mentor_profile: true
+        }
+      });
+
+      return createdUser;
+    });
+
+    const token = jwt.sign(
+      { user_id: newUser.user_id, email: newUser.email, role: newUser.role, name: newUser.name },
+      JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000
+    });
+
+    return res.json({
+      success: true,
+      message: 'Student account created and confirmed successfully!',
+      token,
+      user: formatUserResponse(newUser)
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: 'Failed to create student account.', error: error.message });
   }
 };
 

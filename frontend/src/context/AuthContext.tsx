@@ -7,6 +7,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<any>;
   googleLogin: (email: string, name?: string, credential?: string) => Promise<any>;
+  confirmGoogleStudentRegistration: (payload: any) => Promise<any>;
   register: (payload: any) => Promise<any>;
   verifyOtp: (email: string, otp_code: string) => Promise<any>;
   adminVerifyOtp: (email: string, otp_code: string) => Promise<any>;
@@ -92,6 +93,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return res.data;
   };
 
+  const confirmGoogleStudentRegistration = async (payload: any) => {
+    const res = await api.post('/auth/confirm-google-student-registration', payload);
+    if (res.data.success && res.data.user) {
+      const cleanUser = sanitizeUser(res.data.user);
+      setUser(cleanUser);
+      return { ...res.data, user: cleanUser };
+    }
+    return res.data;
+  };
+
   const register = async (payload: any) => {
     const res = await api.post('/auth/register', payload);
     if (res.data.success && res.data.user) {
@@ -136,7 +147,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, googleLogin, register, verifyOtp, adminVerifyOtp, resendOtp, logout, refetchUser }}>
+    <AuthContext.Provider value={{ user, loading, login, googleLogin, confirmGoogleStudentRegistration, register, verifyOtp, adminVerifyOtp, resendOtp, logout, refetchUser }}>
       {children}
     </AuthContext.Provider>
   );

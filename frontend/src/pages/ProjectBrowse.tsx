@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useModal } from '../context/ModalContext';
 import api from '../services/api';
 import { AppShell } from '../components/layout/AppShell';
 import { MatchBadge } from '../components/ui/MatchBadge';
@@ -11,6 +12,7 @@ import { Compass, Search, Eye, CheckCircle, Clock, UserPlus, FolderX } from 'luc
 
 export const ProjectBrowse: React.FC = () => {
   const { user } = useAuth();
+  const { showAlert } = useModal();
   const navigate = useNavigate();
   const [projects, setProjects] = useState<any[]>([]);
   const [departments, setDepartments] = useState<any[]>([]);
@@ -58,10 +60,10 @@ export const ProjectBrowse: React.FC = () => {
     try {
       setRequestingMap(prev => ({ ...prev, [projectId]: true }));
       const res = await api.post(`/projects/${projectId}/join`);
-      alert(res.data.message || 'Join request sent to project leader!');
+      await showAlert(res.data.message || 'Join request sent to project leader!', 'success');
       fetchProjects();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to send join request.');
+      await showAlert(err.response?.data?.message || 'Failed to send join request.', 'error');
     } finally {
       setRequestingMap(prev => ({ ...prev, [projectId]: false }));
     }

@@ -120,9 +120,6 @@ export const FacultyOnboarding: React.FC = () => {
     api.get('/users/departments').then(res => {
       const depts = res.data.departments || [];
       setDepartments(depts);
-      if (depts.length > 0 && !departmentId) {
-        setDepartmentId(depts[0].department_id);
-      }
     }).catch(() => {});
   }, []);
 

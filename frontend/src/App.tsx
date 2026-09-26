@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
+import { ModalProvider } from './context/ModalContext';
 
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
@@ -53,146 +54,148 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles?: strin
 
 export const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <SocketProvider>
-        <Router>
-          <ScrollToTop />
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route
-              path="/faculty/onboarding"
-              element={
-                <ProtectedRoute allowedRoles={['MENTOR']}>
-                  <FacultyOnboarding />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/auth/callback" element={<AuthCallback />} />
+    <ModalProvider>
+      <AuthProvider>
+        <SocketProvider>
+          <Router>
+            <ScrollToTop />
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route
+                path="/faculty/onboarding"
+                element={
+                  <ProtectedRoute allowedRoles={['MENTOR']}>
+                    <FacultyOnboarding />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="/auth/callback" element={<AuthCallback />} />
 
-            <Route
-              path="/student/dashboard"
-              element={
-                <ProtectedRoute allowedRoles={['STUDENT']}>
-                  <StudentDashboard />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/student/dashboard"
+                element={
+                  <ProtectedRoute allowedRoles={['STUDENT']}>
+                    <StudentDashboard />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/mentor/dashboard"
-              element={
-                <ProtectedRoute allowedRoles={['MENTOR']}>
-                  <MentorDashboard />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/mentor/dashboard"
+                element={
+                  <ProtectedRoute allowedRoles={['MENTOR']}>
+                    <MentorDashboard />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/mentor/student-projects"
-              element={
-                <ProtectedRoute allowedRoles={['MENTOR']}>
-                  <StudentProjectsPage />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/mentor/student-projects"
+                element={
+                  <ProtectedRoute allowedRoles={['MENTOR']}>
+                    <StudentProjectsPage />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/mentor/my-teams"
-              element={
-                <ProtectedRoute allowedRoles={['MENTOR']}>
-                  <MyCapstoneTeams />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/mentor/my-teams"
+                element={
+                  <ProtectedRoute allowedRoles={['MENTOR']}>
+                    <MyCapstoneTeams />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute allowedRoles={['ADMIN']}>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute allowedRoles={['ADMIN']}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/admin/*"
-              element={
-                <ProtectedRoute allowedRoles={['ADMIN']}>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/admin/*"
+                element={
+                  <ProtectedRoute allowedRoles={['ADMIN']}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/projects/browse"
-              element={
-                <ProtectedRoute>
-                  <ProjectBrowse />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/projects/browse"
+                element={
+                  <ProtectedRoute>
+                    <ProjectBrowse />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/projects/create"
-              element={
-                <ProtectedRoute allowedRoles={['STUDENT', 'ADMIN']}>
-                  <ProjectCreation />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/projects/create"
+                element={
+                  <ProtectedRoute allowedRoles={['STUDENT', 'ADMIN']}>
+                    <ProjectCreation />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/my-projects"
-              element={
-                <ProtectedRoute>
-                  <MyProjects />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/my-projects"
+                element={
+                  <ProtectedRoute>
+                    <MyProjects />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/faculty"
-              element={
-                <ProtectedRoute>
-                  <FacultyDirectory />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/faculty"
+                element={
+                  <ProtectedRoute>
+                    <FacultyDirectory />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/projects/details/:projectId"
-              element={
-                <ProtectedRoute>
-                  <ProjectDetails />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/projects/details/:projectId"
+                element={
+                  <ProtectedRoute>
+                    <ProjectDetails />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/workspace"
-              element={
-                <ProtectedRoute>
-                  <ProjectWorkspace />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/workspace"
+                element={
+                  <ProtectedRoute>
+                    <ProjectWorkspace />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/project/:projectId/*"
-              element={
-                <ProtectedRoute>
-                  <ProjectWorkspace />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/project/:projectId/*"
+                element={
+                  <ProtectedRoute>
+                    <ProjectWorkspace />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
-        </Router>
-      </SocketProvider>
-    </AuthProvider>
+              <Route path="/" element={<Navigate to="/login" replace />} />
+              <Route path="*" element={<Navigate to="/login" replace />} />
+            </Routes>
+          </Router>
+        </SocketProvider>
+      </AuthProvider>
+    </ModalProvider>
   );
 };
 

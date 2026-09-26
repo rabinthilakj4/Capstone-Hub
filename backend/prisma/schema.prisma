@@ -9,39 +9,34 @@ generator client {
 
 model User {
   user_id           String   @id @default(uuid())
-  student_id        String?  @unique @db.VarChar(50)
   name              String
   email             String   @unique
   password_hash     String
   role              String   // STUDENT, MENTOR, ADMIN
-  department_id     Int?
+  department_id     String
   status            String   @default("ACTIVE") // ACTIVE, INACTIVE
-  email_verified    Boolean  @default(false)
+  email_verified    Boolean  @default(true)
   profile_completed Boolean  @default(false)
   created_at        DateTime @default(now())
 
-  department        Department?    @relation(fields: [department_id], references: [department_id])
+  department        Department     @relation(fields: [department_id], references: [department_id])
   student_profile   StudentProfile?
   mentor_profile    MentorProfile?
   created_projects  Project[]      @relation("CreatedProjects")
   mentored_projects Project[]      @relation("MentoredProjects")
   team_memberships  TeamMember[]
+  tasks_assigned    Task[]         @relation("AssignedTasks")
+  task_comments     TaskComment[]
   uploaded_docs     Document[]
   sent_messages     Message[]
+  meetings_created  Meeting[]
+  evaluations       Evaluation[]
   notifications     Notification[]
   audit_logs        AuditLog[]
-  assigned_tasks    Task[]         @relation("AssignedTasks")
-  created_tasks     Task[]         @relation("CreatedTasks")
-  task_comments     TaskComment[]
-  meetings_hosted   Meeting[]
-  evaluations_given Evaluation[]
-  join_requests     JoinRequest[]
 }
 
 model StudentProfile {
   user_id           String   @id
-  year              String   @default("1st Year")
-  phone             String   @default("")
   skills            String   // JSON string of array
   interests         String   // JSON string of array
   experience        String   @default("")
@@ -54,14 +49,8 @@ model StudentProfile {
 
 model MentorProfile {
   user_id            String   @id
-  employee_id        String   @default("")
-  designation        String   @default("Assistant Professor")
-  expertise          String   @default("[]") // JSON string of array
-  subjects_handled   String   @default("[]") // JSON string of array
-  years_experience   Int      @default(0)
-  skills             String   @default("[]") // JSON string of array
-  research_interests String   @default("[]") // JSON string of array
-  preferred_domains  String   @default("[]") // JSON string of array
+  expertise          String   // JSON string of array
+  research_interests String   // JSON string of array
   availability       String   @default("Available")
   mentoring_capacity Int      @default(5)
   current_load       Int      @default(0)
@@ -70,13 +59,11 @@ model MentorProfile {
 }
 
 model Department {
-  department_id   Int    @id @default(autoincrement())
-  department_code String @default("") @db.VarChar(20)
-  department_name String @unique @db.VarChar(100)
+  department_id   String @id @default(uuid())
+  department_name String @unique
   status          String @default("ACTIVE")
 
-  users           User[]
-  target_projects Project[] @relation("TargetDepartmentProjects")
+  users User[]
 }
 
 model Skill {
@@ -86,7 +73,6 @@ model Skill {
 
 model Project {
   project_id                 String   @id @default(uuid())
-  project_code               String?  @unique
   title                      String
   abstract                   String
   problem_statement          String
@@ -96,13 +82,11 @@ model Project {
   objectives                 String   // JSON string of array
   required_skills            String   // JSON string of array
   required_departments       String   // JSON string of array
-  eligible_years             String   @default("[]") // JSON string of array
-  target_department_id       Int?
   team_size                  Int      @default(4)
   technologies               String   // JSON string of array
   hardware_requirements      String   @default("None")
   expected_outcome           String
-  duration                   String   @default("1 Semester")
+  duration                   String   @default("2 Semesters")
   difficulty_level           String   @default("Intermediate")
   preferred_mentor_expertise String   // JSON string of array
   status                     String   @default("PENDING") // PENDING, PUBLISHED, REJECTED, ARCHIVED, COMPLETED
@@ -110,37 +94,20 @@ model Project {
   mentor_id                  String?
   created_at                 DateTime @default(now())
 
-  creator             User                @relation("CreatedProjects", fields: [created_by], references: [user_id], onDelete: Cascade)
-  mentor              User?               @relation("MentoredProjects", fields: [mentor_id], references: [user_id], onDelete: SetNull)
-  target_department   Department?         @relation("TargetDepartmentProjects", fields: [target_department_id], references: [department_id], onDelete: SetNull)
+  creator             User                @relation("CreatedProjects", fields: [created_by], references: [user_id])
+  mentor              User?               @relation("MentoredProjects", fields: [mentor_id], references: [user_id])
   team                Team?
   mentorship_requests MentorshipRequest[]
-  join_requests       JoinRequest[]
+  tasks               Task[]
   milestones          Milestone[]
   documents           Document[]
   messages            Message[]
-  tasks               Task[]
   meetings            Meeting[]
   evaluations         Evaluation[]
 }
 
-model JoinRequest {
-  request_id   String   @id @default(uuid())
-  project_id   String
-  student_id   String
-  status       String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
-  notes        String   @default("")
-  created_at   DateTime @default(now())
-
-  project Project @relation(fields: [project_id], references: [project_id], onDelete: Cascade)
-  student User    @relation(fields: [student_id], references: [user_id], onDelete: Cascade)
-
-  @@unique([project_id, student_id])
-}
-
 model Team {
   team_id    String   @id @default(uuid())
-  team_code  String?  @unique
   project_id String   @unique
   status     String   @default("ACTIVE")
   created_at DateTime @default(now())
@@ -150,10 +117,10 @@ model Team {
 }
 
 model TeamMember {
-  team_id    String
+  team_id   String
   student_id String
-  role       String   @default("Member") // Leader, Member
-  joined_at  DateTime @default(now())
+  role      String   @default("Member") // Leader, Member
+  joined_at DateTime @default(now())
 
   team    Team @relation(fields: [team_id], references: [team_id], onDelete: Cascade)
   student User @relation(fields: [student_id], references: [user_id], onDelete: Cascade)
@@ -162,28 +129,56 @@ model TeamMember {
 }
 
 model MentorshipRequest {
-  request_id    String   @id @default(uuid())
-  project_id    String
-  mentor_id     String
-  status        String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
-  response_note String   @default("")
-  requested_at  DateTime @default(now())
+  request_id   String   @id @default(uuid())
+  project_id   String
+  mentor_id    String
+  status       String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  response_note String  @default("")
+  requested_at DateTime @default(now())
 
   project Project @relation(fields: [project_id], references: [project_id], onDelete: Cascade)
 }
 
+model Task {
+  task_id     String   @id @default(uuid())
+  project_id  String
+  assigned_to String
+  title       String
+  description String
+  priority    String   @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  due_date    String
+  status      String   @default("TODO") // TODO, IN_PROGRESS, REVIEW, COMPLETED
+  attachments String   @default("[]") // JSON string of array
+  created_at  DateTime @default(now())
+
+  project  Project       @relation(fields: [project_id], references: [project_id], onDelete: Cascade)
+  assignee User          @relation("AssignedTasks", fields: [assigned_to], references: [user_id])
+  comments TaskComment[]
+}
+
+model TaskComment {
+  comment_id String   @id @default(uuid())
+  task_id    String
+  author_id  String
+  content    String
+  created_at DateTime @default(now())
+
+  task   Task @relation(fields: [task_id], references: [task_id], onDelete: Cascade)
+  author User @relation(fields: [author_id], references: [user_id], onDelete: Cascade)
+}
+
 model Milestone {
-  milestone_id     String    @id @default(uuid())
-  project_id       String
-  title            String
-  deadline         String
-  status           String    @default("PENDING") // PENDING, SUBMITTED, IN_REVIEW, APPROVED, REVISION_REQUESTED
-  submission_url   String    @default("")
-  submission_notes String    @default("")
-  feedback         String    @default("")
-  rating           Int       @default(0)
-  approved_by      String    @default("")
-  submitted_at     DateTime?
+  milestone_id    String   @id @default(uuid())
+  project_id      String
+  title           String
+  deadline        String
+  status          String   @default("PENDING") // PENDING, SUBMITTED, IN_REVIEW, APPROVED, REVISION_REQUESTED
+  submission_url  String   @default("")
+  submission_notes String  @default("")
+  feedback        String   @default("")
+  rating          Int      @default(0)
+  approved_by     String   @default("")
+  submitted_at    DateTime?
 
   project Project @relation(fields: [project_id], references: [project_id], onDelete: Cascade)
 }
@@ -199,7 +194,7 @@ model Document {
   created_at    DateTime @default(now())
 
   project  Project @relation(fields: [project_id], references: [project_id], onDelete: Cascade)
-  uploader User    @relation(fields: [uploaded_by], references: [user_id], onDelete: Cascade)
+  uploader User    @relation(fields: [uploaded_by], references: [user_id])
 }
 
 model Message {
@@ -210,16 +205,41 @@ model Message {
   created_at DateTime @default(now())
 
   project Project @relation(fields: [project_id], references: [project_id], onDelete: Cascade)
-  sender  User    @relation(fields: [sender_id], references: [user_id], onDelete: Cascade)
+  sender  User    @relation(fields: [sender_id], references: [user_id])
+}
+
+model Meeting {
+  meeting_id   String   @id @default(uuid())
+  project_id   String
+  scheduled_by String
+  meeting_time String
+  agenda       String
+  notes        String   @default("")
+  status       String   @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELLED
+  created_at   DateTime @default(now())
+
+  project   Project @relation(fields: [project_id], references: [project_id], onDelete: Cascade)
+  scheduler User    @relation(fields: [scheduled_by], references: [user_id])
+}
+
+model Evaluation {
+  evaluation_id   String   @id @default(uuid())
+  project_id      String
+  evaluator_id    String
+  criteria_scores String   // JSON object
+  total_score     Float
+  feedback_notes  String   @default("")
+  created_at      DateTime @default(now())
+
+  project   Project @relation(fields: [project_id], references: [project_id], onDelete: Cascade)
+  evaluator User    @relation(fields: [evaluator_id], references: [user_id])
 }
 
 model Notification {
   notification_id String   @id @default(uuid())
   user_id         String
-  type            String   // PROJECT_INVITE, PROJECT_ACCEPT, PROJECT_REJECT, TASK, MILESTONE, MENTORSHIP, SYSTEM
+  type            String   // PROJECT, TASK, MILESTONE, MENTORSHIP, SYSTEM
   message         String
-  project_id      String?
-  status          String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
   read            Boolean  @default(false)
   created_at      DateTime @default(now())
 
@@ -238,97 +258,7 @@ model AuditLog {
   user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 }
 
-model OtpVerification {
-  id         String   @id @default(uuid())
-  email      String   @unique
-  otp_code   String
-  role       String   @default("STUDENT")
-  expires_at DateTime
-  created_at DateTime @default(now())
-}
-
-model PendingRegistration {
-  id            String   @id @default(uuid())
-  name          String
-  email         String   @unique
-  password_hash String
-  role          String
-  department_id Int
-  student_id    String?
-  year          String?
-  phone         String?
-  skills        String?
-  interests     String?
-  otp_code      String
-  expires_at    DateTime
-  created_at    DateTime @default(now())
-}
-
 model SystemSetting {
-  key        String   @id
-  value      String
-  updated_at DateTime @default(now())
-}
-
-model Task {
-  task_id     String   @id @default(uuid())
-  project_id  String
-  title       String
-  description String   @default("")
-  assigned_to String?
-  created_by  String
-  status      String   @default("TODO") // TODO, IN_PROGRESS, IN_REVIEW, COMPLETED
-  priority    String   @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
-  due_date    String?
-  created_at  DateTime @default(now())
-
-  project  Project       @relation(fields: [project_id], references: [project_id], onDelete: Cascade)
-  assignee User?         @relation("AssignedTasks", fields: [assigned_to], references: [user_id], onDelete: SetNull)
-  creator  User          @relation("CreatedTasks", fields: [created_by], references: [user_id], onDelete: Cascade)
-  comments TaskComment[]
-}
-
-model TaskComment {
-  comment_id String   @id @default(uuid())
-  task_id    String
-  user_id    String
-  comment    String
-  created_at DateTime @default(now())
-
-  task Task @relation(fields: [task_id], references: [task_id], onDelete: Cascade)
-  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-}
-
-model Meeting {
-  meeting_id     String   @id @default(uuid())
-  project_id     String
-  meeting_number Int      @default(1)
-  title          String
-  description    String   @default("")
-  scheduled_at   DateTime
-  location       String   @default("Online")
-  meet_link      String   @default("")
-  host_id        String
-  created_at     DateTime @default(now())
-
-  project Project @relation(fields: [project_id], references: [project_id], onDelete: Cascade)
-  host    User    @relation(fields: [host_id], references: [user_id], onDelete: Cascade)
-}
-
-model Evaluation {
-  evaluation_id String   @id @default(uuid())
-  project_id    String
-  evaluator_id  String
-  score         Float
-  feedback      String   @default("")
-  rubric_scores String   @default("{}")
-  created_at    DateTime @default(now())
-
-  project   Project @relation(fields: [project_id], references: [project_id], onDelete: Cascade)
-  evaluator User    @relation(fields: [evaluator_id], references: [user_id], onDelete: Cascade)
-}
-
-model ProjectCounter {
-  id       Int @id @default(1)
-  last_val Int @default(0)
+  key   String @id
+  value String // JSON configuration
 }

@@ -36,22 +36,36 @@ export const AuthCallback: React.FC = () => {
       try {
         const res = await googleLogin(email, name || email.split('@')[0]);
 
-        if (res.success && res.user) {
-          const role = res.user.role;
-          if (!res.user.profile_completed) {
-            if (role === 'MENTOR') {
-              navigate('/faculty/onboarding', { replace: true });
-            } else {
-              navigate('/register', { replace: true });
+        if (res.success) {
+          if (res.isNewUser || res.requirePersonalDetails) {
+            // 🔒 NEW STUDENT GOOGLE SIGN-IN: Save pending student details and navigate to Personal Details form (/register)
+            if (res.pendingStudent) {
+              sessionStorage.setItem('pendingGoogleStudent', JSON.stringify(res.pendingStudent));
             }
-          } else if (role === 'STUDENT') {
-            navigate('/student/dashboard', { replace: true });
-          } else if (role === 'MENTOR') {
-            navigate('/mentor/dashboard', { replace: true });
-          } else if (role === 'ADMIN') {
-            navigate('/admin/dashboard', { replace: true });
-          } else {
-            navigate('/', { replace: true });
+            if (res.tempToken) {
+              sessionStorage.setItem('tempGoogleToken', res.tempToken);
+            }
+            navigate('/register', { replace: true });
+            return;
+          }
+
+          if (res.user) {
+            const role = res.user.role;
+            if (!res.user.profile_completed) {
+              if (role === 'MENTOR') {
+                navigate('/faculty/onboarding', { replace: true });
+              } else {
+                navigate('/register', { replace: true });
+              }
+            } else if (role === 'STUDENT') {
+              navigate('/student/dashboard', { replace: true });
+            } else if (role === 'MENTOR') {
+              navigate('/mentor/dashboard', { replace: true });
+            } else if (role === 'ADMIN') {
+              navigate('/admin/dashboard', { replace: true });
+            } else {
+              navigate('/', { replace: true });
+            }
           }
         } else {
           setErrorMsg(res?.message || 'Google authentication failed in Capstone Hub.');

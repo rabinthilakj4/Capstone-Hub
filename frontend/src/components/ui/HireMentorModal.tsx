@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useModal } from '../../context/ModalContext';
 import { UserCheck, X, Send, AlertCircle, CheckCircle2, FolderPlus, ShieldAlert, CheckCircle, Clock } from 'lucide-react';
 import api from '../../services/api';
 
@@ -20,6 +21,7 @@ export const HireMentorModal: React.FC<HireMentorModalProps> = ({
   initialProjectId
 }) => {
   const { user } = useAuth();
+  const { showAlert } = useModal();
   const [myProjects, setMyProjects] = useState<any[]>([]);
   const [mentoredProjectsList, setMentoredProjectsList] = useState<any[]>([]);
   const [allProjectsCount, setAllProjectsCount] = useState<number>(0);
@@ -108,14 +110,14 @@ export const HireMentorModal: React.FC<HireMentorModalProps> = ({
       });
 
       if (res.data.success) {
-        alert(res.data.message || 'Mentorship request sent successfully!');
+        await showAlert(res.data.message || 'Mentorship request sent successfully!', 'success');
         onSuccess();
         onClose();
       }
     } catch (err: any) {
       const errMsg = err.response?.data?.message || 'Failed to send mentorship request.';
       if (errMsg.toLowerCase().includes('already exists')) {
-        alert('Mentorship request sent successfully!');
+        await showAlert('Mentorship request sent successfully!', 'success');
         onSuccess();
         onClose();
       } else {

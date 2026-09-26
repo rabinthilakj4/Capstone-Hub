@@ -42,7 +42,7 @@ export const OnboardingModal: React.FC = () => {
   const [registerNumber, setRegisterNumber] = useState('');
   const [phone, setPhone] = useState('');
   const [departmentId, setDepartmentId] = useState<number | string>('');
-  const [year, setYear] = useState<string>('I Year');
+  const [year, setYear] = useState<string>('');
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
 
   // Prevent background page scrolling while the onboarding modal/page is active
@@ -64,15 +64,15 @@ export const OnboardingModal: React.FC = () => {
       api.get('/users/departments').then(res => {
         const depts = res.data.departments || [];
         setDepartments(depts);
-        if (depts.length > 0 && !departmentId) {
-          setDepartmentId(String(user.department_id || depts[0].department_id));
+        if (user.department_id) {
+          setDepartmentId(String(user.department_id));
         }
       }).catch(() => {});
 
       setEmail(user.email || '');
       setRegisterNumber(user.student_id || '');
       setPhone(user.student_profile?.phone || '');
-      setYear(user.student_profile?.year || 'I Year');
+      setYear(user.student_profile?.year || '');
 
       if (user.student_profile?.skills) {
         const userSkills = typeof user.student_profile.skills === 'string'
@@ -294,10 +294,15 @@ export const OnboardingModal: React.FC = () => {
                       value={year}
                       onChange={e => setYear(e.target.value)}
                       required
-                      className="w-full pl-11 pr-8 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition appearance-none cursor-pointer"
+                      className={`w-full pl-11 pr-8 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition appearance-none cursor-pointer ${
+                        year ? 'text-slate-900 font-bold' : 'text-slate-500 font-medium'
+                      }`}
                     >
+                      <option value="" disabled hidden>
+                        Select your academic year
+                      </option>
                       {YEAR_OPTIONS.map(y => (
-                        <option key={y} value={y}>
+                        <option key={y} value={y} className="text-slate-900 font-semibold">
                           {y}
                         </option>
                       ))}

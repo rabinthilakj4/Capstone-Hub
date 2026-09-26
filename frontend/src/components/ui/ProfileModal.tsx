@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useModal } from '../../context/ModalContext';
 import api from '../../services/api';
 import { StatusPill } from './StatusPill';
 import {
@@ -14,6 +15,7 @@ interface ProfileModalProps {
 
 export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
   const { user, refetchUser } = useAuth();
+  const { showAlert } = useModal();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -77,9 +79,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
       }
       await refetchUser();
       setIsEditing(false);
-      alert('Profile details updated successfully!');
+      await showAlert('Profile details updated successfully!', 'success');
     } catch (e) {
-      alert('Failed to update profile.');
+      await showAlert('Failed to update profile.', 'error');
     } finally {
       setLoading(false);
     }

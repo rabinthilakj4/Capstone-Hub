@@ -33,15 +33,19 @@ const PROJECT_SKILLS = [
 const YEAR_OPTIONS = ['I Year', 'II Year', 'III Year', 'IV Year'];
 
 export const Register: React.FC = () => {
-  const { user, refetchUser } = useAuth();
+  const { user, refetchUser, confirmGoogleStudentRegistration } = useAuth();
   const navigate = useNavigate();
 
+  const pendingDataStr = sessionStorage.getItem('pendingGoogleStudent');
+  const pendingData = pendingDataStr ? JSON.parse(pendingDataStr) : null;
+  const tempToken = sessionStorage.getItem('tempGoogleToken');
+
   const [step, setStep] = useState<1 | 2>(1);
-  const [name, setName] = useState(user?.name || '');
+  const [name, setName] = useState(pendingData?.name || user?.name || '');
   const [registerNumber, setRegisterNumber] = useState('');
   const [phone, setPhone] = useState('');
   const [departmentId, setDepartmentId] = useState<number | string>('');
-  const [year, setYear] = useState<string>('I Year');
+  const [year, setYear] = useState<string>('');
   const [departments, setDepartments] = useState<any[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [error, setError] = useState('');
@@ -49,21 +53,23 @@ export const Register: React.FC = () => {
 
   // Sync prefilled name from Google profile if available
   useEffect(() => {
-    if (user?.name && !name) {
+    if (pendingData?.name && !name) {
+      setName(pendingData.name);
+    } else if (user?.name && !name) {
       setName(user.name);
     }
-  }, [user]);
+  }, [user, pendingData]);
 
   // Existing Google user with completed profile enters Dashboard directly
   useEffect(() => {
-    if (user && user.profile_completed) {
+    if (user && user.profile_completed && !pendingData) {
       const role = user.role;
       if (role === 'STUDENT') navigate('/student/dashboard', { replace: true });
       else if (role === 'MENTOR') navigate('/mentor/dashboard', { replace: true });
       else if (role === 'ADMIN') navigate('/admin/dashboard', { replace: true });
       else navigate('/', { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, pendingData, navigate]);
 
   // Prevent unwanted background body scrollbars
   useEffect(() => {
@@ -79,9 +85,6 @@ export const Register: React.FC = () => {
     api.get('/users/departments').then(res => {
       const depts = res.data.departments || [];
       setDepartments(depts);
-      if (depts.length > 0 && !departmentId) {
-        setDepartmentId(depts[0].department_id);
-      }
     }).catch(() => {});
   }, []);
 
@@ -96,6 +99,12 @@ export const Register: React.FC = () => {
   const validatePhone = (phoneStr: string): boolean => {
     const digitsOnly = phoneStr.replace(/\D/g, '');
     return digitsOnly.length >= 7 && digitsOnly.length <= 15;
+  };
+
+  const handleCancelRegistration = () => {
+    sessionStorage.removeItem('pendingGoogleStudent');
+    sessionStorage.removeItem('tempGoogleToken');
+    navigate('/login', { replace: true });
   };
 
   // PAGE 1 Validation -> Navigate to Page 2
@@ -131,34 +140,59 @@ export const Register: React.FC = () => {
     setStep(2);
   };
 
-  // PAGE 2 Final Save -> Dashboard
+  // PAGE 2 Final Save -> Create DB Record & Navigate to Dashboard
   const handleFinalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      const res = await api.post('/users/complete-onboarding', {
-        name: name.trim(),
-        student_id: registerNumber.trim(),
-        register_number: registerNumber.trim(),
-        phone: phone.trim(),
-        department_id: departmentId,
-        year: year,
-        skills: selectedSkills
-      });
+      if (pendingData?.email || tempToken) {
+        // 🔒 CONFIRM STUDENT GOOGLE REGISTRATION (Create DB record ONLY NOW!)
+        const res = await confirmGoogleStudentRegistration({
+          tempToken: tempToken || undefined,
+          email: pendingData?.email || user?.email,
+          name: name.trim(),
+          student_id: registerNumber.trim(),
+          register_number: registerNumber.trim(),
+          phone: phone.trim(),
+          department_id: departmentId,
+          year: year,
+          skills: selectedSkills
+        });
 
-      if (res.data.success) {
-        await refetchUser();
-        const role = res.data.user?.role || user?.role || 'STUDENT';
-        if (role === 'MENTOR') navigate('/mentor/dashboard', { replace: true });
-        else if (role === 'ADMIN') navigate('/admin/dashboard', { replace: true });
-        else navigate('/student/dashboard', { replace: true });
+        if (res.success && res.user) {
+          sessionStorage.removeItem('pendingGoogleStudent');
+          sessionStorage.removeItem('tempGoogleToken');
+          await refetchUser();
+          navigate('/student/dashboard', { replace: true });
+        } else {
+          setError(res.message || 'Failed to create student account. Please try again.');
+        }
       } else {
-        setError(res.data.message || 'Failed to save onboarding profile. Please try again.');
+        // Existing user onboarding fallback
+        const res = await api.post('/users/complete-onboarding', {
+          name: name.trim(),
+          student_id: registerNumber.trim(),
+          register_number: registerNumber.trim(),
+          phone: phone.trim(),
+          department_id: departmentId,
+          year: year,
+          skills: selectedSkills
+        });
+
+        if (res.data.success) {
+          await refetchUser();
+          const role = res.data.user?.role || user?.role || 'STUDENT';
+          if (role === 'MENTOR') navigate('/mentor/dashboard', { replace: true });
+          else if (role === 'ADMIN') navigate('/admin/dashboard', { replace: true });
+          else navigate('/student/dashboard', { replace: true });
+        } else {
+          setError(res.data.message || 'Failed to save onboarding profile. Please try again.');
+        }
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to save onboarding profile. Please try again.');
+      setError(err.response?.data?.message || err.message || 'Failed to save onboarding profile. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -216,10 +250,10 @@ export const Register: React.FC = () => {
                     Provide your student details to complete initial onboarding.
                   </p>
                 </div>
-                {user?.email && (
+                {(user?.email || pendingData?.email) && (
                   <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-full text-xs font-bold text-indigo-900">
                     <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>{user.email}</span>
+                    <span>{pendingData?.email || user?.email}</span>
                   </div>
                 )}
               </div>
@@ -304,10 +338,15 @@ export const Register: React.FC = () => {
                       value={year}
                       onChange={e => setYear(e.target.value)}
                       required
-                      className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition appearance-none cursor-pointer"
+                      className={`w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition appearance-none cursor-pointer ${
+                        year ? 'text-slate-900 font-bold' : 'text-slate-500 font-medium'
+                      }`}
                     >
+                      <option value="" disabled hidden>
+                        Select your academic year
+                      </option>
                       {YEAR_OPTIONS.map(y => (
-                        <option key={y} value={y}>
+                        <option key={y} value={y} className="text-slate-900 font-semibold">
                           {y}
                         </option>
                       ))}

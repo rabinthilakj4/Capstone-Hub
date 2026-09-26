@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, CheckCheck, Clock, Layers, Sparkles, FolderCheck, AlertCircle, Info, X, ExternalLink } from 'lucide-react';
 import api from '../../services/api';
+import { useModal } from '../../context/ModalContext';
 
 interface NotificationItem {
   notification_id: string;
@@ -39,6 +40,7 @@ const DEFAULT_NOTIFICATIONS: NotificationItem[] = [
 
 export const NotificationDropdown: React.FC = () => {
   const navigate = useNavigate();
+  const { showAlert } = useModal();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -110,7 +112,7 @@ export const NotificationDropdown: React.FC = () => {
         prev.map(n => n.notification_id === notificationId ? { ...n, status: action === 'ACCEPT' ? 'ACCEPTED' : 'REJECTED', read: true } : n)
       );
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to respond to invitation.');
+      await showAlert(err.response?.data?.message || 'Failed to respond to invitation.', 'error');
     }
   };
 
@@ -157,7 +159,15 @@ export const NotificationDropdown: React.FC = () => {
 
       {/* Popover Menu Drawer */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden text-slate-900 animate-in fade-in slide-in-from-top-2 duration-150">
+        <>
+          {/* Subtle Mobile Backdrop Overlay */}
+          <div
+            className="sm:hidden fixed inset-0 bg-slate-950/30 backdrop-blur-xs z-40 transition-opacity duration-150 animate-in fade-in"
+            onClick={() => setIsOpen(false)}
+          />
+
+          {/* Popover Panel (Top-Centered on Mobile, Standard Right-Aligned on Desktop) */}
+          <div className="fixed top-18 left-1/2 -translate-x-1/2 w-[92vw] max-w-sm sm:absolute sm:top-full sm:right-0 sm:left-auto sm:translate-x-0 sm:w-96 sm:mt-2 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden text-slate-900 animate-in fade-in slide-in-from-top-2 duration-150">
           {/* Panel Header */}
           <div className="px-4 py-3 bg-slate-900 text-white flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -261,6 +271,7 @@ export const NotificationDropdown: React.FC = () => {
             Capstone Hub System Alerts & Workflow Notifications
           </div>
         </div>
+        </>
       )}
     </div>
   );

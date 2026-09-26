@@ -9,7 +9,20 @@ export const Login: React.FC = () => {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { googleLogin } = useAuth();
+  const { user, googleLogin } = useAuth();
+
+  // If user is already authenticated, automatically redirect to their assigned panel
+  useEffect(() => {
+    if (user) {
+      if (user.role === 'ADMIN') {
+        navigate('/admin/dashboard', { replace: true });
+      } else if (user.role === 'MENTOR') {
+        navigate(user.profile_completed ? '/mentor/dashboard' : '/faculty/onboarding', { replace: true });
+      } else if (user.role === 'STUDENT') {
+        navigate(user.profile_completed ? '/student/dashboard' : '/register', { replace: true });
+      }
+    }
+  }, [user, navigate]);
 
   useEffect(() => {
     const errorParam = searchParams.get('error');
@@ -64,7 +77,7 @@ export const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Decorative gradient background elements */}
+      {/* Decorative background glow elements */}
       <div className="absolute -top-40 -left-40 w-96 h-96 bg-indigo-600/30 rounded-full blur-3xl"></div>
       <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-teal-600/20 rounded-full blur-3xl"></div>
 
@@ -85,12 +98,12 @@ export const Login: React.FC = () => {
 
           {error && (
             <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-xl font-medium flex items-center gap-2.5">
-              <AlertCircle className="w-5 h-5 shrink-0" />
+              <AlertCircle className="w-5 h-5 shrink-0 text-rose-600" />
               <span>{error}</span>
             </div>
           )}
 
-          {/* Single "Sign in with Google" Button for All Users */}
+          {/* Single Main "Sign in with Google" Button */}
           <button
             type="button"
             onClick={handleGoogleClick}
@@ -106,7 +119,7 @@ export const Login: React.FC = () => {
             <span>{googleLoading ? 'Redirecting to Google...' : 'Sign in with Google'}</span>
           </button>
 
-          {/* Test Faculty Login Button */}
+          {/* Test Faculty Login Button for Testing Purposes */}
           <div className="pt-2 border-t border-slate-100">
             <button
               type="button"
@@ -123,4 +136,3 @@ export const Login: React.FC = () => {
     </div>
   );
 };
-

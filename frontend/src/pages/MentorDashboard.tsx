@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useModal } from '../context/ModalContext';
 import api from '../services/api';
 import { AppShell } from '../components/layout/AppShell';
 import { ProjectDetailsModal } from '../components/project/ProjectDetailsModal';
@@ -10,6 +11,7 @@ import {
 
 export const MentorDashboard: React.FC = () => {
   const { user } = useAuth();
+  const { showAlert } = useModal();
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const [recommendedProjects, setRecommendedProjects] = useState<any[]>([]);
   const [assignedProjects, setAssignedProjects] = useState<any[]>([]);
@@ -59,40 +61,40 @@ export const MentorDashboard: React.FC = () => {
   const handleAcceptRequest = async (requestId: string) => {
     try {
       const res = await api.post(`/mentor-requests/requests/${requestId}/accept`);
-      alert(res.data.message || 'Mentorship request accepted!');
+      await showAlert(res.data.message || 'Mentorship request accepted!', 'success');
       loadMentorData();
     } catch (e: any) {
-      alert(e.response?.data?.message || 'Failed to accept request.');
+      await showAlert(e.response?.data?.message || 'Failed to accept request.', 'error');
     }
   };
 
   const handleRejectRequest = async (requestId: string) => {
     try {
       const res = await api.post(`/mentor-requests/requests/${requestId}/reject`, { response_note: 'Declined' });
-      alert(res.data.message || 'Mentorship request declined.');
+      await showAlert(res.data.message || 'Mentorship request declined.', 'info');
       loadMentorData();
     } catch (e: any) {
-      alert(e.response?.data?.message || 'Failed to reject request.');
+      await showAlert(e.response?.data?.message || 'Failed to reject request.', 'error');
     }
   };
 
   const handleAcceptDirectProject = async (projectId: string) => {
     try {
       const res = await api.post(`/mentor-requests/project/${projectId}/accept`);
-      alert(res.data.message || 'Project mentorship accepted!');
+      await showAlert(res.data.message || 'Project mentorship accepted!', 'success');
       loadMentorData();
     } catch (e: any) {
-      alert(e.response?.data?.message || 'Failed to accept project.');
+      await showAlert(e.response?.data?.message || 'Failed to accept project.', 'error');
     }
   };
 
   const handleRejectDirectProject = async (projectId: string) => {
     try {
       const res = await api.post(`/mentor-requests/project/${projectId}/reject`);
-      alert(res.data.message || 'Project removed from recommendations.');
+      await showAlert(res.data.message || 'Project removed from recommendations.', 'info');
       loadMentorData();
     } catch (e: any) {
-      alert(e.response?.data?.message || 'Failed to reject project.');
+      await showAlert(e.response?.data?.message || 'Failed to reject project.', 'error');
     }
   };
 
