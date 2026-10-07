@@ -51,18 +51,33 @@ if (process.env.VERCEL !== '1') {
   }
 }
 
-// API Routes
+// API Routes (Mounted under both /api/... and /... for Vercel Serverless compatibility)
 app.use('/api/auth', authRoutes);
+app.use('/auth', authRoutes);
+
 app.use('/api/users', userRoutes);
+app.use('/users', userRoutes);
+
 app.use('/api/projects', projectRoutes);
+app.use('/projects', projectRoutes);
+
 app.use('/api/teams', teamRoutes);
+app.use('/teams', teamRoutes);
+
 app.use('/api/mentors', mentorRoutes);
+app.use('/mentors', mentorRoutes);
+
 app.use('/api/mentor-requests', mentorRoutes);
+app.use('/mentor-requests', mentorRoutes);
+
 app.use('/api/workspace', workspaceRoutes);
+app.use('/workspace', workspaceRoutes);
+
 app.use('/api/admin', adminRoutes);
+app.use('/admin', adminRoutes);
 
 // Health check
-app.get('/api/health', (req, res) => {
+app.get(['/api/health', '/health'], (req, res) => {
   res.json({ status: 'OK', message: 'Capstone Hub API service active with live Supabase database.', timestamp: new Date() });
 });
 
