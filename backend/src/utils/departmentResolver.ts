@@ -113,7 +113,20 @@ export async function resolveDepartment(input: string | number | undefined | nul
     }
   }
 
-  // Fallback to CSE (ID 9) if no match found
-  const cseDept = allDepts.find(d => d.department_id === 9);
-  return cseDept || allDepts[0];
+  // Fallback to CSE or create default department if database table is empty
+  const cseDept = allDepts.find(d => d.department_id === 9) || allDepts[0];
+  if (cseDept) return cseDept;
+
+  try {
+    return await prisma.department.create({
+      data: {
+        department_name: 'Computer Science & Engineering',
+        department_code: 'CSE',
+        status: 'ACTIVE'
+      }
+    });
+  } catch (e) {
+    const fallback = await prisma.department.findFirst();
+    return fallback || { department_id: 1, department_name: 'Computer Science & Engineering', department_code: 'CSE', status: 'ACTIVE' };
+  }
 }

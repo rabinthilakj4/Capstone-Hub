@@ -660,7 +660,7 @@ export const googleLogin = async (req: Request, res: Response) => {
       const parsedName = name || parsedInfo.name;
 
       const userDept = (await resolveDepartment(parsedInfo.deptCode)) || defaultDept;
-      const targetDeptId = userDept.department_id;
+      const targetDeptId = userDept?.department_id || defaultDept?.department_id || 1;
 
       if (!user) {
         if (assignedRole === UserRole.STUDENT || (assignedRole as string) === 'STUDENT') {
