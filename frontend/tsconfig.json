@@ -20,5 +20,5 @@
       "shared": ["../shared/src/index.ts"]
     }
   },
-  "include": ["src", "api", "../shared/src"]
+  "include": ["src", "../shared/src"]
 }

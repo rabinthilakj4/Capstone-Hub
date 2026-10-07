@@ -11,6 +11,8 @@
   "scripts": {
     "setup": "npm install && npm run build:shared && npm run db:push && npm run db:seed",
     "build:shared": "npm run build --workspace=shared",
+    "build": "npm run build --workspace=shared && npm run db:generate --workspace=backend && npm run build --workspace=backend && npm run build --workspace=frontend",
+    "postinstall": "npm run db:generate --workspace=backend",
     "dev:backend": "npm run dev --workspace=backend",
     "dev:frontend": "npm run dev --workspace=frontend",
     "db:push": "npm run db:push --workspace=backend",
