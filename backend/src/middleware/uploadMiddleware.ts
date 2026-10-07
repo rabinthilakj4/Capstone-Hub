@@ -2,10 +2,14 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
-// Ensure uploads directory exists
-const uploadDir = path.join(__dirname, '../../uploads');
+// Ensure uploads directory exists (use /tmp in Vercel serverless environment)
+const uploadDir = process.env.VERCEL === '1' ? '/tmp' : path.join(__dirname, '../../uploads');
 if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+  try {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  } catch (e) {
+    // Read-only filesystem in serverless environment
+  }
 }
 
 // Storage engine configuration
