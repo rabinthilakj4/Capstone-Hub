@@ -42,8 +42,14 @@ app.use(cors({
   credentials: true
 }));
 
-// Swagger Documentation
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+// Swagger Documentation (Enabled in non-Vercel local environment)
+if (process.env.VERCEL !== '1') {
+  try {
+    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+  } catch (e) {
+    console.warn('Swagger UI disabled in serverless environment.');
+  }
+}
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -60,7 +66,21 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Capstone Hub API service active with live Supabase database.', timestamp: new Date() });
 });
 
-// Socket.IO Setup
-setupSocketIO(io);
+// Socket.IO Setup (Enabled in non-Vercel environment)
+if (process.env.VERCEL !== '1') {
+  try {
+    setupSocketIO(io);
+  } catch (e) {
+    console.warn('Socket.IO disabled in serverless environment.');
+  }
+}
+
+// Global Express Error Handling Middleware (Prevents serverless function crashes)
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Unhandled server error:', err);
+  const status = err.status || err.statusCode || 500;
+  const message = err.message || 'Internal Server Error';
+  res.status(status).json({ success: false, message });
+});
 
 export { app, server };
