@@ -605,7 +605,7 @@ export const googleLogin = async (req: Request, res: Response) => {
 
     // 2. FETCH EXISTING USER RECORD
     let user = await prisma.user.findFirst({
-      where: { email: { equals: cleanEmail, mode: 'insensitive' } },
+      where: { email: cleanEmail },
       include: {
         department: true,
         student_profile: true,
@@ -770,7 +770,8 @@ export const googleLogin = async (req: Request, res: Response) => {
       user: formatUserResponse(user)
     });
   } catch (error: any) {
-    return res.status(500).json({ success: false, message: 'Google Authentication failed.', error: error.message });
+    const detailMsg = error?.message || (typeof error === 'string' ? error : 'Google Authentication failed.');
+    return res.status(500).json({ success: false, message: detailMsg });
   }
 };
 
