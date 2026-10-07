@@ -3,33 +3,38 @@ import { Request, Response } from 'express';
 let appInstance: any = null;
 let initError: any = null;
 
-try {
-  const { app } = require('../backend/src/server');
-  appInstance = app;
-} catch (err: any) {
-  initError = err;
-  console.error('Vercel API top-level load error:', err);
-}
-
-export default function handler(req: Request, res: Response) {
-  if (!appInstance) {
+function loadBackendApp() {
+  if (appInstance) return appInstance;
+  try {
+    // Import compiled backend server dist
+    const { app } = require('../backend/dist/server');
+    appInstance = app;
+    return appInstance;
+  } catch (err: any) {
+    // Fallback to source
     try {
       const { app } = require('../backend/src/server');
       appInstance = app;
-      initError = null;
-    } catch (err: any) {
-      initError = err;
+      return appInstance;
+    } catch (err2: any) {
+      initError = err2 || err;
+      console.error('Vercel API load error:', initError);
+      return null;
     }
   }
+}
 
-  if (initError || !appInstance) {
+export default function handler(req: Request, res: Response) {
+  const expressApp = loadBackendApp();
+
+  if (!expressApp) {
     return res.status(500).json({
       success: false,
       message: 'Serverless Function Initialization Failed',
-      error: initError?.message || (typeof initError === 'string' ? initError : String(initError)),
-      stack: process.env.NODE_ENV === 'development' ? initError?.stack : undefined
+      error: initError?.message || String(initError),
+      stack: initError?.stack
     });
   }
 
-  return appInstance(req, res);
+  return expressApp(req, res);
 }
