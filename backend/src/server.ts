@@ -1,11 +1,10 @@
 import express from 'express';
 import http from 'http';
-import { Server } from 'socket.io';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
-import swaggerUi from 'swagger-ui-express';
-import { swaggerDocument } from './swagger';
+import path from 'path';
+import fs from 'fs';
 
 import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
@@ -14,24 +13,17 @@ import teamRoutes from './routes/teamRoutes';
 import mentorRoutes from './routes/mentorRoutes';
 import workspaceRoutes from './routes/workspaceRoutes';
 import adminRoutes from './routes/adminRoutes';
-import { setupSocketIO } from './sockets/chatHandler';
-
-import path from 'path';
 
 dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
 
-const io = new Server(server, {
-  cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
-    credentials: true
-  }
-});
-
-// Serve static uploaded files
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Serve static uploaded files if directory exists
+const uploadsDir = path.join(__dirname, '../uploads');
+if (fs.existsSync(uploadsDir)) {
+  app.use('/uploads', express.static(uploadsDir));
+}
 
 // Middleware
 app.use(express.json());
@@ -42,12 +34,31 @@ app.use(cors({
   credentials: true
 }));
 
-// Swagger Documentation (Enabled in non-Vercel local environment)
+// Swagger Documentation (Enabled only in local development)
 if (process.env.VERCEL !== '1') {
   try {
+    const swaggerUi = require('swagger-ui-express');
+    const { swaggerDocument } = require('./swagger');
     app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
   } catch (e) {
-    console.warn('Swagger UI disabled in serverless environment.');
+    // Ignore in serverless environment
+  }
+}
+
+// Socket.IO Setup (Enabled only in local development)
+if (process.env.VERCEL !== '1') {
+  try {
+    const { Server } = require('socket.io');
+    const { setupSocketIO } = require('./sockets/chatHandler');
+    const io = new Server(server, {
+      cors: {
+        origin: process.env.CLIENT_URL || 'http://localhost:5173',
+        credentials: true
+      }
+    });
+    setupSocketIO(io);
+  } catch (e) {
+    // Ignore in serverless environment
   }
 }
 
@@ -80,15 +91,6 @@ app.use('/admin', adminRoutes);
 app.get(['/api/health', '/health'], (req, res) => {
   res.json({ status: 'OK', message: 'Capstone Hub API service active with live Supabase database.', timestamp: new Date() });
 });
-
-// Socket.IO Setup (Enabled in non-Vercel environment)
-if (process.env.VERCEL !== '1') {
-  try {
-    setupSocketIO(io);
-  } catch (e) {
-    console.warn('Socket.IO disabled in serverless environment.');
-  }
-}
 
 // Global Express Error Handling Middleware (Prevents serverless function crashes)
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
