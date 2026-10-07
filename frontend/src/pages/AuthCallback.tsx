@@ -68,16 +68,18 @@ export const AuthCallback: React.FC = () => {
             }
           }
         } else {
-          setErrorMsg(res?.message || 'Google authentication failed in Capstone Hub.');
+          const rawMsg = res?.message || 'Google authentication failed in Capstone Hub.';
+          setErrorMsg(typeof rawMsg === 'object' ? (rawMsg.message || JSON.stringify(rawMsg)) : String(rawMsg));
         }
       } catch (err: any) {
         const backendMessage = err.response?.data?.message || err.response?.data?.error;
         if (backendMessage) {
-          setErrorMsg(backendMessage);
+          setErrorMsg(typeof backendMessage === 'object' ? (backendMessage.message || JSON.stringify(backendMessage)) : String(backendMessage));
         } else if (err.response?.status === 500 || err.code === 'ERR_BAD_RESPONSE') {
           setErrorMsg('Authentication server error (500). Please check that the backend server is running and try again.');
         } else {
-          setErrorMsg(err.message || 'Google authentication error.');
+          const errText = err.message || 'Google authentication error.';
+          setErrorMsg(typeof errText === 'object' ? JSON.stringify(errText) : String(errText));
         }
       }
     };
@@ -161,7 +163,7 @@ export const AuthCallback: React.FC = () => {
             !
           </div>
           <h2 className="text-lg font-bold text-slate-900 mb-2">Google Authentication Notice</h2>
-          <p className="text-xs text-rose-600 font-medium mb-4">{errorMsg}</p>
+          <p className="text-xs text-rose-600 font-medium mb-4">{typeof errorMsg === 'object' ? JSON.stringify(errorMsg) : String(errorMsg)}</p>
           <button
             onClick={() => navigate('/login')}
             className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition shadow-md"
