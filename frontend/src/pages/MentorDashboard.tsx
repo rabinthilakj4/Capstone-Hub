@@ -159,12 +159,12 @@ export const MentorDashboard: React.FC = () => {
                       <div className="space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
                           {req.project.project_code && (
-                            <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 text-[10px] font-mono font-bold rounded-md border border-indigo-200">
+                            <span className="whitespace-nowrap shrink-0 px-2 py-0.5 bg-indigo-100 text-indigo-800 text-[10px] font-mono font-bold rounded-md border border-indigo-200">
                               Project ID: {req.project.project_code}
                             </span>
                           )}
                           {req.project.team?.team_code && (
-                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-mono font-bold rounded-md border border-emerald-200">
+                            <span className="whitespace-nowrap shrink-0 px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-mono font-bold rounded-md border border-emerald-200">
                               Team ID: {req.project.team.team_code}
                             </span>
                           )}

@@ -356,12 +356,12 @@ export const AdminDashboard: React.FC = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {stats?.departmentCounts?.map((d: any) => (
-                  <div key={d.department_id || d.department_name} className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-slate-500 font-bold">{d.department_code ? `[${d.department_code}]` : ''} {d.department_name}</p>
+                  <div key={d.department_id || d.department_name} className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-slate-500 font-bold truncate">{d.department_code ? `[${d.department_code}]` : ''} {d.department_name}</p>
                       <p className="text-xl font-black text-slate-900 mt-1">{d.count} Users</p>
                     </div>
-                    <span className="text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-lg">
+                    <span className="whitespace-nowrap shrink-0 text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-lg">
                       ID: {d.department_id}
                     </span>
                   </div>
@@ -567,38 +567,40 @@ export const AdminDashboard: React.FC = () => {
         {/* 4. DEPARTMENTS TAB */}
         {activeTab === 'DEPARTMENTS' && (
           <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-4">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-slate-100 pb-4">
               <div>
                 <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <Building className="w-5 h-5 text-indigo-600" />
+                  <Building className="w-5 h-5 text-indigo-600 shrink-0" />
                   <span>Configured Academic Departments ({departments.length})</span>
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">Existing database departmentId entries used across Students, Faculty, & Projects</p>
               </div>
 
               {/* Add New Department Form */}
-              <form onSubmit={handleCreateDepartment} className="flex gap-2 w-full sm:w-auto">
-                <input
-                  type="text"
-                  placeholder="Code (e.g. AIML)"
-                  value={newDeptCode}
-                  onChange={e => setNewDeptCode(e.target.value)}
-                  className="w-24 px-3 py-1.5 border border-slate-200 rounded-xl text-xs bg-slate-50 text-slate-900"
-                />
-                <input
-                  type="text"
-                  placeholder="Department Name..."
-                  value={newDeptName}
-                  onChange={e => setNewDeptName(e.target.value)}
-                  required
-                  className="px-3 py-1.5 border border-slate-200 rounded-xl text-xs bg-slate-50 text-slate-900 flex-1 sm:w-48"
-                />
+              <form onSubmit={handleCreateDepartment} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto">
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <input
+                    type="text"
+                    placeholder="Code (e.g. AIML)"
+                    value={newDeptCode}
+                    onChange={e => setNewDeptCode(e.target.value)}
+                    className="w-28 px-3 py-2 border border-slate-200 rounded-xl text-xs bg-slate-50 text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Department Name..."
+                    value={newDeptName}
+                    onChange={e => setNewDeptName(e.target.value)}
+                    required
+                    className="px-3 py-2 border border-slate-200 rounded-xl text-xs bg-slate-50 text-slate-900 flex-1 sm:w-56 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                  />
+                </div>
                 <button
                   type="submit"
-                  className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow flex items-center gap-1"
+                  className="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow flex items-center justify-center gap-1.5 shrink-0 transition"
                 >
-                  <PlusCircle className="w-3.5 h-3.5" />
-                  <span>Add</span>
+                  <PlusCircle className="w-4 h-4" />
+                  <span>Add Department</span>
                 </button>
               </form>
             </div>
@@ -606,11 +608,13 @@ export const AdminDashboard: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {departments.map(d => (
                 <div key={d.department_id} className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
-                  <div className="flex justify-between items-start">
-                    <span className="text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 rounded-md">
+                  <div className="flex justify-between items-center gap-2">
+                    <span className="whitespace-nowrap shrink-0 text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-lg">
                       ID: {d.department_id}
                     </span>
-                    <StatusPill status={d.status} />
+                    <span className="shrink-0">
+                      <StatusPill status={d.status} />
+                    </span>
                   </div>
                   <h3 className="text-sm font-extrabold text-slate-900">{d.department_name}</h3>
                   <p className="text-xs text-slate-500">Code: <span className="font-mono font-bold text-slate-700">{d.department_code}</span></p>
