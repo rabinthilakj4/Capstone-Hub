@@ -15,8 +15,9 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   useEffect(() => {
     if (user) {
-      const newSocket = io('http://localhost:5000', {
-        withCredentials: true
+      const newSocket = io(window.location.origin, {
+        withCredentials: true,
+        transports: ['websocket', 'polling']
       });
       setSocket(newSocket);
       return () => {

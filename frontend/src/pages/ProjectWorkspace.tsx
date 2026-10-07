@@ -812,7 +812,7 @@ export const ProjectWorkspace: React.FC = () => {
                   </div>
                   <p className="text-[10px] text-slate-400">Uploaded by {doc.uploader?.name || 'Team member'}</p>
                   <a
-                    href={doc.file_location?.startsWith('/uploads') ? `http://localhost:5000${doc.file_location}` : doc.file_location}
+                    href={doc.file_location}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:underline pt-2"
